@@ -5,6 +5,7 @@ import { PostsService } from './post.service';
 import { Post } from './post.entity';
 import { CreatePostDto, Platform, PostStatus } from './dto/create-post.dto';
 import { NotFoundException } from '@nestjs/common';
+import { SortOrder } from '../common/pagination.dto';
 
 describe('PostsService', () => {
     let service: PostsService;
@@ -36,7 +37,7 @@ describe('PostsService', () => {
     const mockRepository = {
         create: jest.fn(),
         save: jest.fn(),
-        find: jest.fn(),
+        findAndCount: jest.fn(),
         findOne: jest.fn(),
         delete: jest.fn(),
     };
@@ -74,34 +75,95 @@ describe('PostsService', () => {
     });
 
     describe('findAll', () => {
-        it('should return an array of posts with no filters', async () => {
-            mockRepository.find.mockResolvedValue([mockPost]);
+        it('should return paginated posts with default pagination', async () => {
+            const mockPosts = [mockPost];
+            const totalPosts = 1;
+            mockRepository.findAndCount.mockResolvedValue([mockPosts, totalPosts]);
 
             const result = await service.findAll({});
 
-            expect(result).toEqual([mockPost]);
-            expect(mockRepository.find).toHaveBeenCalledWith({
+            expect(result).toEqual({
+                data: mockPosts,
+                meta: {
+                    total: totalPosts,
+                    page: 1,
+                    lastPage: 1,
+                    limit: 10,
+                    hasPreviousPage: false,
+                    hasNextPage: false,
+                },
+            });
+
+            expect(mockRepository.findAndCount).toHaveBeenCalledWith({
                 where: {},
-                order: { createdAt: 'DESC' },
+                order: { createdAt: SortOrder.DESC },
+                skip: 0,
+                take: 10,
             });
         });
 
-        it('should return filtered posts when query parameters are provided', async () => {
+        it('should return paginated posts with custom pagination and filters', async () => {
+            const mockPosts = [mockPost];
+            const totalPosts = 1;
             const query = {
+                page: 2,
+                limit: 5,
+                sortBy: 'title',
+                order: SortOrder.ASC,
                 brand: 'Test Brand',
                 platform: Platform.INSTAGRAM,
                 status: PostStatus.DRAFT,
             };
 
-            mockRepository.find.mockResolvedValue([mockPost]);
+            mockRepository.findAndCount.mockResolvedValue([mockPosts, totalPosts]);
 
             const result = await service.findAll(query);
 
-            expect(result).toEqual([mockPost]);
-            expect(mockRepository.find).toHaveBeenCalledWith({
-                where: query,
-                order: { createdAt: 'DESC' },
+            expect(result).toEqual({
+                data: mockPosts,
+                meta: {
+                    total: totalPosts,
+                    page: 2,
+                    lastPage: 1,
+                    limit: 5,
+                    hasPreviousPage: true,
+                    hasNextPage: false,
+                },
             });
+
+            expect(mockRepository.findAndCount).toHaveBeenCalledWith({
+                where: {
+                    brand: query.brand,
+                    platform: query.platform,
+                    status: query.status,
+                },
+                order: { [query.sortBy]: query.order },
+                skip: 5,
+                take: 5,
+            });
+        });
+
+        it('should handle date range filters', async () => {
+            const mockPosts = [mockPost];
+            const totalPosts = 1;
+            const dueDateFrom = new Date('2025-01-01');
+            const dueDateTo = new Date('2025-12-31');
+
+            mockRepository.findAndCount.mockResolvedValue([mockPosts, totalPosts]);
+
+            const result = await service.findAll({
+                dueDateFrom,
+                dueDateTo,
+            });
+
+            expect(result.data).toEqual(mockPosts);
+            expect(mockRepository.findAndCount).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    where: {
+                        dueDate: expect.any(Object),
+                    },
+                }),
+            );
         });
     });
 

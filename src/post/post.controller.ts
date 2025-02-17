@@ -16,6 +16,7 @@ import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { QueryPostsDto } from './dto/query-posts.dto';
 import { PostResponseDto } from './dto/post-response.dto';
+import { PaginatedPostsResponseDto } from './dto/paginated-response.dto';
 
 @ApiTags('posts')
 @ApiBearerAuth()
@@ -31,9 +32,9 @@ export class PostsController {
     }
 
     @Get()
-    @ApiOperation({ summary: 'Get all posts with filters' })
-    @ApiResponse({ status: HttpStatus.OK, type: [PostResponseDto] })
-    findAll(@Query() query: QueryPostsDto): Promise<PostResponseDto[]> {
+    @ApiOperation({ summary: 'Get all posts with filters and pagination' })
+    @ApiResponse({ status: HttpStatus.OK, type: PaginatedPostsResponseDto })
+    findAll(@Query() query: QueryPostsDto): Promise<PaginatedPostsResponseDto> {
         return this.postsService.findAll(query);
     }
 

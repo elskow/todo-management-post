@@ -5,6 +5,7 @@ import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { QueryPostsDto } from './dto/query-posts.dto';
 import { Post } from './post.entity';
+import { PaginatedPostsResponseDto } from './dto/paginated-response.dto';
 
 @Injectable()
 export class PostsService {
@@ -18,31 +19,59 @@ export class PostsService {
         return await this.postRepository.save(post);
     }
 
-    async findAll(query: QueryPostsDto): Promise<Post[]> {
-        const whereClause: FindOptionsWhere<Post> = {};
+    async findAll(query: QueryPostsDto): Promise<PaginatedPostsResponseDto> {
+        const {
+            page = 1,
+            limit = 10,
+            sortBy = 'createdAt',
+            order = 'DESC',
+            brand,
+            platform,
+            status,
+            dueDateFrom,
+            dueDateTo,
+        } = query;
 
-        if (query.brand) {
-            whereClause.brand = query.brand;
+        const skip = (page - 1) * limit;
+
+        const whereClause: any = {};
+
+        if (brand) {
+            whereClause.brand = brand;
         }
-        if (query.platform) {
-            whereClause.platform = query.platform;
+        if (platform) {
+            whereClause.platform = platform;
         }
-        if (query.status) {
-            whereClause.status = query.status;
+        if (status) {
+            whereClause.status = status;
         }
-        if (query.dueDateFrom || query.dueDateTo) {
+        if (dueDateFrom || dueDateTo) {
             whereClause.dueDate = Between(
-                query.dueDateFrom ? new Date(query.dueDateFrom) : new Date(0),
-                query.dueDateTo ? new Date(query.dueDateTo) : new Date('2099-12-31'),
+                dueDateFrom ? new Date(dueDateFrom) : new Date(0),
+                dueDateTo ? new Date(dueDateTo) : new Date('2099-12-31'),
             );
         }
 
-        return await this.postRepository.find({
+        const [posts, total] = await this.postRepository.findAndCount({
             where: whereClause,
-            order: {
-                createdAt: 'DESC',
-            },
+            order: { [sortBy]: order },
+            skip,
+            take: limit,
         });
+
+        const lastPage = Math.ceil(total / limit);
+
+        return {
+            data: posts,
+            meta: {
+                total,
+                page,
+                lastPage,
+                limit,
+                hasPreviousPage: page > 1,
+                hasNextPage: page < lastPage,
+            },
+        };
     }
 
     async findOne(id: string): Promise<Post> {
