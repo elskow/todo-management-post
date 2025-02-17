@@ -2,9 +2,9 @@ import { Injectable, UseInterceptors } from '@nestjs/common';
 import { CacheKey, CacheTTL, CacheInterceptor } from '@nestjs/cache-manager';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThanOrEqual } from 'typeorm';
-import { Post } from '../core/post.entity';
-import { PostStatus } from '../core/dto/create-post.dto';
-import { PaginationDto } from '../../common/pagination.dto';
+import { Post } from '@app/post/core/post.entity';
+import { PostStatus } from '@app/post/core/dto/create-post.dto';
+import { PaginationDto } from '@common/pagination.dto';
 import { PostAnalyticsDto, PostStatisticsDto } from './analytics.dto';
 
 @Injectable()

@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Platform, PostStatus } from '../core/dto/create-post.dto';
+import { Platform, PostStatus } from '@app/post/core/dto/create-post.dto';
 
 export class PlatformStats {
   @ApiProperty({ enum: Platform })

@@ -3,8 +3,8 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { AnalyticsService } from './analytics.service';
-import { Post } from '../core/post.entity';
-import { Platform, PostStatus } from '../core/dto/create-post.dto';
+import { Post } from '@app/post/core/post.entity';
+import { Platform, PostStatus } from '@app/post/core/dto/create-post.dto';
 
 describe('AnalyticsService', () => {
   let service: AnalyticsService;

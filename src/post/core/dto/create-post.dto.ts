@@ -8,7 +8,7 @@ import {
   Min,
   IsDate,
 } from 'class-validator';
-import { TransformDate } from '../../../common/date.transformer';
+import { TransformDate } from '@common/date.transformer';
 
 export enum Platform {
   INSTAGRAM = 'INSTAGRAM',

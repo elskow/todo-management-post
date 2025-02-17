@@ -1,6 +1,6 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { PaginationDto } from '../../common/pagination.dto';
+import { PaginationDto } from '@common/pagination.dto';
 import { AnalyticsService } from './analytics.service';
 import {
   PostAnalyticsDto,

@@ -6,7 +6,7 @@ import { Post } from './post.entity';
 import { PostVersion } from './post-version.entity';
 import { CreatePostDto, Platform, PostStatus } from './dto/create-post.dto';
 import { NotFoundException } from '@nestjs/common';
-import { SortOrder } from '../../common/pagination.dto';
+import { SortOrder } from '@common/pagination.dto';
 
 describe('PostsService', () => {
   let service: PostsService;
