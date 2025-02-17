@@ -6,6 +6,7 @@ import { PostModule } from './post/post.module';
 import databaseConfig from './config/db.config';
 import { Post } from './post/core/post.entity';
 import { PostVersion } from './post/core/post-version.entity';
+import { join } from 'path';
 
 @Module({
   imports: [
@@ -27,7 +28,7 @@ import { PostVersion } from './post/core/post-version.entity';
         password: configService.get('database.password'),
         database: configService.get('database.database'),
         entities: [Post, PostVersion],
-        migrations: ['dist/migrations/*.js'],
+        migrations: [join(__dirname, 'migrations', '*.js')],
         migrationsTableName: 'migrations_typeorm',
         migrationsRun: true,
       }),

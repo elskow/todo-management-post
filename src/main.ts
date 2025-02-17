@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { compressionConfig } from './config/compression.config';
@@ -36,9 +36,13 @@ async function bootstrap() {
     const port = process.env.PORT || 3000;
     await app.listen(port);
 
-    console.log(`Application is running on: http://localhost:${port}`);
-    console.log(
+    Logger.log(
+      `Application is running on: http://localhost:${port}`,
+      'Bootstrap',
+    );
+    Logger.log(
       `Swagger documentation is available at: http://localhost:${port}/api`,
+      'Bootstrap',
     );
   } catch (error) {
     console.error('Error starting the application:', error);
