@@ -4,16 +4,19 @@ import {
   PrimaryGeneratedColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Post } from './post.entity';
 import { Platform, PostStatus } from './dto/create-post.dto';
 
 @Entity('post_versions')
+@Index(['postId', 'createdAt'])
 export class PostVersion {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column()
+  @Index()
   postId: string;
 
   @ManyToOne(() => Post, { onDelete: 'CASCADE' })
@@ -59,5 +62,6 @@ export class PostVersion {
     type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP',
   })
+  @Index()
   createdAt: Date;
 }
