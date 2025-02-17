@@ -37,6 +37,11 @@ jobs:
         ports:
           - 3306:3306
 
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+
     steps:
       - uses: actions/checkout@v3
 
@@ -76,6 +81,8 @@ jobs:
           DB_USERNAME: todouser
           DB_PASSWORD: todopassword
           DB_DATABASE: todo_posts
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
 
       - name: Run unit tests
         run: pnpm run test
@@ -86,6 +93,8 @@ jobs:
           DB_USERNAME: todouser
           DB_PASSWORD: todopassword
           DB_DATABASE: todo_posts
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
 
       - name: Run e2e tests
         run: pnpm run test:e2e
@@ -96,3 +105,5 @@ jobs:
           DB_USERNAME: todouser
           DB_PASSWORD: todopassword
           DB_DATABASE: todo_posts
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
