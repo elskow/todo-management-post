@@ -1,5 +1,13 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsInt, Min, Max, IsString, IsEnum } from 'class-validator';
+import {
+  IsOptional,
+  IsInt,
+  Min,
+  Max,
+  IsString,
+  IsEnum,
+  IsDate,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export enum SortOrder {
@@ -22,6 +30,21 @@ export class PaginationDto {
   @Min(1)
   @Max(100)
   limit?: number = 10;
+}
+
+export class CursorPaginationDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  cursor?: string;
+
+  @ApiPropertyOptional({ default: 10 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number = 10;
 
   @ApiPropertyOptional({ default: 'createdAt' })
   @IsOptional()
@@ -32,4 +55,32 @@ export class PaginationDto {
   @IsOptional()
   @IsEnum(SortOrder)
   order?: SortOrder = SortOrder.DESC;
+}
+
+export interface PaginatedResponseDto<T> {
+  data: T[];
+  meta: {
+    hasMore: boolean;
+    nextCursor?: string;
+    total?: number;
+  };
+}
+
+export class PaginationMetaDto {
+  @ApiPropertyOptional()
+  hasMore: boolean;
+
+  @ApiPropertyOptional()
+  nextCursor?: string;
+
+  @ApiPropertyOptional()
+  total?: number;
+}
+
+export class PaginatedResponseDto<T> {
+  @ApiPropertyOptional()
+  data: T[];
+
+  @ApiPropertyOptional()
+  meta: PaginationMetaDto;
 }

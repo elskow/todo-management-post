@@ -42,12 +42,22 @@ describe('PostsService', () => {
     createdAt: new Date(),
   };
 
+  const createMockQueryBuilder = () => ({
+    andWhere: jest.fn().mockReturnThis(),
+    orderBy: jest.fn().mockReturnThis(),
+    addOrderBy: jest.fn().mockReturnThis(),
+    take: jest.fn().mockReturnThis(),
+    getMany: jest.fn().mockResolvedValue([]),
+    getCount: jest.fn().mockResolvedValue(0),
+  });
+
   const mockPostRepository = {
     create: jest.fn(),
     save: jest.fn(),
     findAndCount: jest.fn(),
     findOne: jest.fn(),
     delete: jest.fn(),
+    createQueryBuilder: jest.fn().mockReturnValue(createMockQueryBuilder()),
   };
 
   const mockVersionRepository = {
@@ -111,88 +121,68 @@ describe('PostsService', () => {
   describe('findAll', () => {
     it('should return paginated posts with default pagination', async () => {
       const mockPosts = [mockPost];
-      const totalPosts = 1;
-      mockPostRepository.findAndCount.mockResolvedValue([
-        mockPosts,
-        totalPosts,
-      ]);
+      const mockQueryBuilder = createMockQueryBuilder();
+      mockQueryBuilder.getMany.mockResolvedValue(mockPosts);
+      mockQueryBuilder.getCount.mockResolvedValue(1);
+      mockPostRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       const result = await service.findAll({});
 
       expect(result).toEqual({
         data: mockPosts,
         meta: {
-          total: totalPosts,
-          page: 1,
-          lastPage: 1,
-          limit: 10,
-          hasPreviousPage: false,
-          hasNextPage: false,
+          hasMore: false,
+          nextCursor: undefined,
+          total: 1,
         },
       });
 
-      expect(mockPostRepository.findAndCount).toHaveBeenCalledWith({
-        where: {},
-        order: { createdAt: SortOrder.DESC },
-        skip: 0,
-        take: 10,
-      });
+      expect(mockPostRepository.createQueryBuilder).toHaveBeenCalledWith(
+        'post',
+      );
     });
 
     it('should return paginated posts with custom pagination and filters', async () => {
       const mockPosts = [mockPost];
-      const totalPosts = 1;
+      const mockQueryBuilder = createMockQueryBuilder();
+      mockQueryBuilder.getMany.mockResolvedValue(mockPosts);
+      mockQueryBuilder.getCount.mockResolvedValue(1);
+      mockPostRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
       const query = {
-        page: 2,
-        limit: 5,
-        sortBy: 'title',
-        order: SortOrder.ASC,
         brand: 'Test Brand',
         platform: Platform.INSTAGRAM,
         status: PostStatus.DRAFT,
+        sortBy: 'createdAt',
+        order: SortOrder.DESC,
       };
-
-      mockPostRepository.findAndCount.mockResolvedValue([
-        mockPosts,
-        totalPosts,
-      ]);
 
       const result = await service.findAll(query);
 
       expect(result).toEqual({
         data: mockPosts,
         meta: {
-          total: totalPosts,
-          page: 2,
-          lastPage: 1,
-          limit: 5,
-          hasPreviousPage: true,
-          hasNextPage: false,
+          hasMore: false,
+          nextCursor: undefined,
+          total: 1,
         },
       });
 
-      expect(mockPostRepository.findAndCount).toHaveBeenCalledWith({
-        where: {
-          brand: query.brand,
-          platform: query.platform,
-          status: query.status,
-        },
-        order: { [query.sortBy]: query.order },
-        skip: 5,
-        take: 5,
-      });
+      expect(mockPostRepository.createQueryBuilder).toHaveBeenCalledWith(
+        'post',
+      );
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledTimes(3);
     });
 
     it('should handle date range filters', async () => {
       const mockPosts = [mockPost];
-      const totalPosts = 1;
+      const mockQueryBuilder = createMockQueryBuilder();
+      mockQueryBuilder.getMany.mockResolvedValue(mockPosts);
+      mockQueryBuilder.getCount.mockResolvedValue(1);
+      mockPostRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
       const dueDateFrom = new Date('2025-01-01');
       const dueDateTo = new Date('2025-12-31');
-
-      mockPostRepository.findAndCount.mockResolvedValue([
-        mockPosts,
-        totalPosts,
-      ]);
 
       const result = await service.findAll({
         dueDateFrom,
@@ -200,12 +190,9 @@ describe('PostsService', () => {
       });
 
       expect(result.data).toEqual(mockPosts);
-      expect(mockPostRepository.findAndCount).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: {
-            dueDate: expect.any(Object),
-          },
-        }),
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'post.dueDate BETWEEN :from AND :to',
+        expect.any(Object),
       );
     });
   });

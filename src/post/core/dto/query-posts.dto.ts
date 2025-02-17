@@ -3,9 +3,9 @@ import { IsOptional, IsEnum, IsString, IsDate } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Platform, PostStatus } from './create-post.dto';
 import { TransformDate } from '@common/date.transformer';
-import { PaginationDto } from '@common/pagination.dto';
+import { CursorPaginationDto } from '@common/pagination.dto';
 
-export class QueryPostsDto extends PaginationDto {
+export class QueryPostsDto extends CursorPaginationDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

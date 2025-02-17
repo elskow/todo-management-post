@@ -1,7 +1,7 @@
 import {
   Controller,
   Get,
-  Post,
+  Post as HttpPost,
   Put,
   Delete,
   Body,
@@ -22,8 +22,9 @@ import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { QueryPostsDto } from './dto/query-posts.dto';
 import { PostResponseDto } from './dto/post-response.dto';
-import { PaginatedPostsResponseDto } from './dto/paginated-response.dto';
 import { PostVersion } from './post-version.entity';
+import { PaginatedResponseDto } from '@app/common/pagination.dto';
+import { Post } from './post.entity';
 
 @ApiTags('posts')
 @ApiBearerAuth()
@@ -31,7 +32,7 @@ import { PostVersion } from './post-version.entity';
 export class PostsController {
   constructor(private readonly postsService: PostsService) {}
 
-  @Post()
+  @HttpPost()
   @ApiOperation({ summary: 'Create a new post' })
   @ApiResponse({ status: HttpStatus.CREATED, type: PostResponseDto })
   create(@Body() createPostDto: CreatePostDto): Promise<PostResponseDto> {
@@ -40,9 +41,34 @@ export class PostsController {
 
   @Get()
   @ApiOperation({ summary: 'Get all posts with filters and pagination' })
-  @ApiResponse({ status: HttpStatus.OK, type: PaginatedPostsResponseDto })
-  findAll(@Query() query: QueryPostsDto): Promise<PaginatedPostsResponseDto> {
-    return this.postsService.findAll(query);
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Posts retrieved successfully',
+    type: PaginatedResponseDto<PostResponseDto>,
+  })
+  async findAll(
+    @Query() query: QueryPostsDto,
+  ): Promise<PaginatedResponseDto<PostResponseDto>> {
+    const posts = await this.postsService.findAll(query);
+    return {
+      data: posts.data.map((post) => this.mapToResponseDto(post)),
+      meta: posts.meta,
+    };
+  }
+
+  private mapToResponseDto(post: Post): PostResponseDto {
+    return {
+      id: post.id,
+      title: post.title,
+      content: post.content,
+      brand: post.brand,
+      platform: post.platform,
+      dueDate: post.dueDate,
+      payment: post.payment,
+      status: post.status,
+      createdAt: post.createdAt,
+      updatedAt: post.updatedAt,
+    };
   }
 
   @Get(':id')

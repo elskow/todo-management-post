@@ -10,8 +10,8 @@ import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { QueryPostsDto } from './dto/query-posts.dto';
 import { Post } from './post.entity';
-import { PaginatedPostsResponseDto } from './dto/paginated-response.dto';
 import { PostVersion } from './post-version.entity';
+import { PaginatedResponseDto, SortOrder } from '@app/common/pagination.dto';
 
 @Injectable()
 export class PostsService {
@@ -27,12 +27,12 @@ export class PostsService {
     return await this.postRepository.save(post);
   }
 
-  async findAll(query: QueryPostsDto): Promise<PaginatedPostsResponseDto> {
+  async findAll(query: QueryPostsDto): Promise<PaginatedResponseDto<Post>> {
     const {
-      page = 1,
       limit = 10,
+      cursor,
       sortBy = 'createdAt',
-      order = 'DESC',
+      order = SortOrder.DESC,
       brand,
       platform,
       status,
@@ -40,44 +40,68 @@ export class PostsService {
       dueDateTo,
     } = query;
 
-    const skip = (page - 1) * limit;
-
-    const whereClause: any = {};
+    const queryBuilder = this.postRepository.createQueryBuilder('post');
 
     if (brand) {
-      whereClause.brand = brand;
+      queryBuilder.andWhere('post.brand = :brand', { brand });
     }
     if (platform) {
-      whereClause.platform = platform;
+      queryBuilder.andWhere('post.platform = :platform', { platform });
     }
     if (status) {
-      whereClause.status = status;
+      queryBuilder.andWhere('post.status = :status', { status });
     }
     if (dueDateFrom || dueDateTo) {
-      whereClause.dueDate = Between(
-        dueDateFrom ? new Date(dueDateFrom) : new Date(0),
-        dueDateTo ? new Date(dueDateTo) : new Date('2099-12-31'),
+      queryBuilder.andWhere('post.dueDate BETWEEN :from AND :to', {
+        from: dueDateFrom ? new Date(dueDateFrom) : new Date(0),
+        to: dueDateTo ? new Date(dueDateTo) : new Date('2099-12-31'),
+      });
+    }
+
+    if (cursor) {
+      const decodedCursor = Buffer.from(cursor, 'base64').toString('ascii');
+      const [cursorValue, cursorId] = decodedCursor.split('_');
+
+      if (order === SortOrder.DESC) {
+        queryBuilder.andWhere(
+          `(post.${sortBy} < :cursorValue) OR (post.${sortBy} = :cursorValue AND post.id < :cursorId)`,
+          { cursorValue, cursorId },
+        );
+      } else {
+        queryBuilder.andWhere(
+          `(post.${sortBy} > :cursorValue) OR (post.${sortBy} = :cursorValue AND post.id > :cursorId)`,
+          { cursorValue, cursorId },
+        );
+      }
+    }
+
+    queryBuilder
+      .orderBy(`post.${sortBy}`, order)
+      .addOrderBy('post.id', order) // Secondary sort by ID for stability
+      .take(limit + 1); // Take one extra to determine if there are more results
+
+    const posts = await queryBuilder.getMany();
+
+    const hasMore = posts.length > limit;
+    const items = hasMore ? posts.slice(0, -1) : posts;
+
+    let nextCursor: string | undefined;
+    if (hasMore && items.length > 0) {
+      const lastItem = items[items.length - 1];
+      const cursorValue = lastItem[sortBy];
+      nextCursor = Buffer.from(`${cursorValue}_${lastItem.id}`).toString(
+        'base64',
       );
     }
 
-    const [posts, total] = await this.postRepository.findAndCount({
-      where: whereClause,
-      order: { [sortBy]: order },
-      skip,
-      take: limit,
-    });
-
-    const lastPage = Math.ceil(total / limit);
+    const total = await queryBuilder.getCount();
 
     return {
-      data: posts,
+      data: items,
       meta: {
+        hasMore,
+        nextCursor,
         total,
-        page,
-        lastPage,
-        limit,
-        hasPreviousPage: page > 1,
-        hasNextPage: page < lastPage,
       },
     };
   }
