@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, FindOptionsWhere } from 'typeorm';
 import { CreatePostDto } from './dto/create-post.dto';
@@ -90,20 +95,27 @@ export class PostsService {
     changeReason?: string,
     changedBy?: string,
   ): Promise<PostVersion> {
-    const version = this.postVersionRepository.create({
-      postId: post.id,
-      title: post.title,
-      content: post.content,
-      brand: post.brand,
-      platform: post.platform,
-      dueDate: post.dueDate,
-      payment: post.payment,
-      status: post.status,
-      changeReason,
-      changedBy,
-    });
+    try {
+      const version = this.postVersionRepository.create({
+        postId: post.id,
+        title: post.title,
+        content: post.content,
+        brand: post.brand,
+        platform: post.platform,
+        dueDate: post.dueDate,
+        payment: post.payment,
+        status: post.status,
+        changeReason,
+        changedBy,
+      });
 
-    return await this.postVersionRepository.save(version);
+      return await this.postVersionRepository.save(version);
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Failed to create version history',
+        error.message,
+      );
+    }
   }
 
   async update(
@@ -123,13 +135,29 @@ export class PostsService {
   }
 
   async getVersionHistory(postId: string): Promise<PostVersion[]> {
+    await this.findOne(postId);
+
     return await this.postVersionRepository.find({
       where: { postId },
       order: { createdAt: 'DESC' },
     });
   }
 
+  private isCurrentState(post: Post, version: PostVersion): boolean {
+    return (
+      post.title === version.title &&
+      post.content === version.content &&
+      post.brand === version.brand &&
+      post.platform === version.platform &&
+      post.dueDate.getTime() === version.dueDate.getTime() &&
+      post.payment === version.payment &&
+      post.status === version.status
+    );
+  }
+
   async revertToVersion(postId: string, versionId: string): Promise<Post> {
+    const post = await this.findOne(postId);
+
     const version = await this.postVersionRepository.findOne({
       where: { id: versionId, postId },
     });
@@ -138,24 +166,35 @@ export class PostsService {
       throw new NotFoundException('Version not found');
     }
 
-    const post = await this.findOne(postId);
+    if (this.isCurrentState(post, version)) {
+      throw new BadRequestException(
+        'Cannot revert to version as it matches current state',
+      );
+    }
 
-    // Create a version of the current state before reverting
-    await this.createVersion(post, 'Reverted to previous version');
+    try {
+      // Create a version of the current state before reverting
+      await this.createVersion(post, `Reverted to version ${versionId}`);
 
-    // Revert to the selected version
-    const revertData = {
-      title: version.title,
-      content: version.content,
-      brand: version.brand,
-      platform: version.platform,
-      dueDate: version.dueDate,
-      payment: version.payment,
-      status: version.status,
-    };
+      // Revert to the selected version
+      const revertData = {
+        title: version.title,
+        content: version.content,
+        brand: version.brand,
+        platform: version.platform,
+        dueDate: version.dueDate,
+        payment: version.payment,
+        status: version.status,
+      };
 
-    Object.assign(post, revertData);
-    return await this.postRepository.save(post);
+      Object.assign(post, revertData);
+      return await this.postRepository.save(post);
+    } catch (error) {
+      // Handle potential database errors
+      throw new InternalServerErrorException(
+        'Failed to revert to previous version',
+      );
+    }
   }
 
   async remove(id: string): Promise<void> {
