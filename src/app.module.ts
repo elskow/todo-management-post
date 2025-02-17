@@ -1,15 +1,20 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { PostsModule } from './post/post.module';
+import { CacheModule } from '@nestjs/cache-manager';
+import { PostModule } from './post/post.module';
 import databaseConfig from './config/db.config';
-import { Post } from './post/post.entity';
+import { Post } from './post/core/post.entity';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       load: [databaseConfig],
       isGlobal: true,
+    }),
+    CacheModule.register({
+      isGlobal: true,
+      ttl: 60,
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -27,7 +32,7 @@ import { Post } from './post/post.entity';
       }),
       inject: [ConfigService],
     }),
-    PostsModule,
+    PostModule,
   ],
 })
-export class AppModule { }
+export class AppModule {}
