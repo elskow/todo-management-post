@@ -2,8 +2,15 @@ import {
   Injectable,
   UseInterceptors,
   OnApplicationBootstrap,
+  Inject,
 } from '@nestjs/common';
-import { CacheKey, CacheTTL, CacheInterceptor } from '@nestjs/cache-manager';
+import {
+  CacheKey,
+  CacheTTL,
+  CacheInterceptor,
+  CACHE_MANAGER,
+} from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThanOrEqual } from 'typeorm';
 import { Post } from '@app/post/core/post.entity';
@@ -17,6 +24,8 @@ export class AnalyticsService implements OnApplicationBootstrap {
   constructor(
     @InjectRepository(Post)
     private readonly postRepository: Repository<Post>,
+    @Inject(CACHE_MANAGER)
+    private readonly cacheManager: Cache,
   ) {}
 
   async onApplicationBootstrap() {
@@ -26,6 +35,12 @@ export class AnalyticsService implements OnApplicationBootstrap {
   @CacheKey('post-statistics')
   @CacheTTL(300) // 5 minutes cache
   async getStatistics(): Promise<PostStatisticsDto> {
+    const cached =
+      await this.cacheManager.get<PostStatisticsDto>('post-statistics');
+    if (cached) {
+      return cached;
+    }
+
     const queryBuilder = this.postRepository
       .createQueryBuilder('post')
       .cache(true)
@@ -45,7 +60,7 @@ export class AnalyticsService implements OnApplicationBootstrap {
       this.getStatusStats(),
     ]);
 
-    return {
+    const result: PostStatisticsDto = {
       totalPosts: Number(basicStats.totalPosts) || 0,
       totalPayments: Number(basicStats.totalPayments) || 0,
       averagePayment: Number(basicStats.averagePayment) || 0,
@@ -54,6 +69,9 @@ export class AnalyticsService implements OnApplicationBootstrap {
       postsLastWeek: Number(basicStats.postsLastWeek) || 0,
       postsLastMonth: Number(basicStats.postsLastMonth) || 0,
     };
+
+    await this.cacheManager.set('post-statistics', result, 300);
+    return result;
   }
 
   @CacheKey('platform-performance')
