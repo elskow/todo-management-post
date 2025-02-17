@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder } from 'typeorm';
+import { Repository } from 'typeorm';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { AnalyticsService } from './analytics.service';
 import { Post } from '../core/post.entity';

@@ -5,6 +5,7 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { PostModule } from './post/post.module';
 import databaseConfig from './config/db.config';
 import { Post } from './post/core/post.entity';
+import { PostVersion } from './post/core/post-version.entity';
 
 @Module({
   imports: [
@@ -25,7 +26,7 @@ import { Post } from './post/core/post.entity';
         username: configService.get('database.username'),
         password: configService.get('database.password'),
         database: configService.get('database.database'),
-        entities: [Post],
+        entities: [Post, PostVersion],
         migrations: ['dist/migrations/*.js'],
         migrationsTableName: 'migrations_typeorm',
         migrationsRun: true,

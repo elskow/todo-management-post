@@ -6,12 +6,15 @@ import { UpdatePostDto } from './dto/update-post.dto';
 import { QueryPostsDto } from './dto/query-posts.dto';
 import { Post } from './post.entity';
 import { PaginatedPostsResponseDto } from './dto/paginated-response.dto';
+import { PostVersion } from './post-version.entity';
 
 @Injectable()
 export class PostsService {
   constructor(
     @InjectRepository(Post)
     private postRepository: Repository<Post>,
+    @InjectRepository(PostVersion)
+    private postVersionRepository: Repository<PostVersion>,
   ) {}
 
   async create(createPostDto: CreatePostDto): Promise<Post> {
@@ -82,9 +85,76 @@ export class PostsService {
     return post;
   }
 
-  async update(id: string, updatePostDto: UpdatePostDto): Promise<Post> {
+  private async createVersion(
+    post: Post,
+    changeReason?: string,
+    changedBy?: string,
+  ): Promise<PostVersion> {
+    const version = this.postVersionRepository.create({
+      postId: post.id,
+      title: post.title,
+      content: post.content,
+      brand: post.brand,
+      platform: post.platform,
+      dueDate: post.dueDate,
+      payment: post.payment,
+      status: post.status,
+      changeReason,
+      changedBy,
+    });
+
+    return await this.postVersionRepository.save(version);
+  }
+
+  async update(
+    id: string,
+    updatePostDto: UpdatePostDto,
+    changeReason?: string,
+    changedBy?: string,
+  ): Promise<Post> {
     const post = await this.findOne(id);
+
+    // Create a version before updating
+    await this.createVersion(post, changeReason, changedBy);
+
+    // Update the post
     Object.assign(post, updatePostDto);
+    return await this.postRepository.save(post);
+  }
+
+  async getVersionHistory(postId: string): Promise<PostVersion[]> {
+    return await this.postVersionRepository.find({
+      where: { postId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async revertToVersion(postId: string, versionId: string): Promise<Post> {
+    const version = await this.postVersionRepository.findOne({
+      where: { id: versionId, postId },
+    });
+
+    if (!version) {
+      throw new NotFoundException('Version not found');
+    }
+
+    const post = await this.findOne(postId);
+
+    // Create a version of the current state before reverting
+    await this.createVersion(post, 'Reverted to previous version');
+
+    // Revert to the selected version
+    const revertData = {
+      title: version.title,
+      content: version.content,
+      brand: version.brand,
+      platform: version.platform,
+      dueDate: version.dueDate,
+      payment: version.payment,
+      status: version.status,
+    };
+
+    Object.assign(post, revertData);
     return await this.postRepository.save(post);
   }
 

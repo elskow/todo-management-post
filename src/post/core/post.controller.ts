@@ -9,6 +9,7 @@ import {
   Query,
   HttpStatus,
   HttpCode,
+  Headers,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -22,6 +23,7 @@ import { UpdatePostDto } from './dto/update-post.dto';
 import { QueryPostsDto } from './dto/query-posts.dto';
 import { PostResponseDto } from './dto/post-response.dto';
 import { PaginatedPostsResponseDto } from './dto/paginated-response.dto';
+import { PostVersion } from './post-version.entity';
 
 @ApiTags('posts')
 @ApiBearerAuth()
@@ -51,15 +53,33 @@ export class PostsController {
     return this.postsService.findOne(id);
   }
 
+  @Get(':id/versions')
+  @ApiOperation({ summary: 'Get version history of a post' })
+  @ApiResponse({ status: HttpStatus.OK, type: [PostVersion] })
+  getVersionHistory(@Param('id') id: string): Promise<PostVersion[]> {
+    return this.postsService.getVersionHistory(id);
+  }
+
+  @Put(':id/revert/:versionId')
+  @ApiOperation({ summary: 'Revert post to a specific version' })
+  @ApiResponse({ status: HttpStatus.OK, type: PostResponseDto })
+  revertToVersion(
+    @Param('id') id: string,
+    @Param('versionId') versionId: string,
+  ): Promise<PostResponseDto> {
+    return this.postsService.revertToVersion(id, versionId);
+  }
+
   @Put(':id')
   @ApiOperation({ summary: 'Update a post' })
   @ApiResponse({ status: HttpStatus.OK, type: PostResponseDto })
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Post not found' })
   update(
     @Param('id') id: string,
     @Body() updatePostDto: UpdatePostDto,
+    @Headers('X-Change-Reason') changeReason?: string,
+    @Headers('X-Changed-By') changedBy?: string,
   ): Promise<PostResponseDto> {
-    return this.postsService.update(id, updatePostDto);
+    return this.postsService.update(id, updatePostDto, changeReason, changedBy);
   }
 
   @Delete(':id')

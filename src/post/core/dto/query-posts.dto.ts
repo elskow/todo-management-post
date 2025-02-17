@@ -3,7 +3,7 @@ import { IsOptional, IsEnum, IsString, IsDate } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Platform, PostStatus } from './create-post.dto';
 import { TransformDate } from '../../../common/date.transformer';
-import { PaginationDto } from 'src/common/pagination.dto';
+import { PaginationDto } from '../../../common/pagination.dto';
 
 export class QueryPostsDto extends PaginationDto {
   @ApiPropertyOptional()
