@@ -45,7 +45,7 @@ async function bootstrap() {
       'Bootstrap',
     );
   } catch (error) {
-    console.error('Error starting the application:', error);
+    Logger.error(`Error starting the application: ${error}`, 'Bootstrap');
     process.exit(1);
   }
 }
