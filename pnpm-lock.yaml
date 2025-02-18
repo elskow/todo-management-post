@@ -47,9 +47,21 @@ importers:
       '@opentelemetry/exporter-trace-otlp-http':
         specifier: ^0.57.2
         version: 0.57.2(@opentelemetry/api@1.9.0)
+      '@opentelemetry/instrumentation-nestjs-core':
+        specifier: ^0.44.0
+        version: 0.44.0(@opentelemetry/api@1.9.0)
+      '@opentelemetry/resources':
+        specifier: ^1.30.1
+        version: 1.30.1(@opentelemetry/api@1.9.0)
       '@opentelemetry/sdk-node':
         specifier: ^0.57.2
         version: 0.57.2(@opentelemetry/api@1.9.0)
+      '@opentelemetry/sdk-trace-base':
+        specifier: ^1.30.1
+        version: 1.30.1(@opentelemetry/api@1.9.0)
+      '@opentelemetry/semantic-conventions':
+        specifier: ^1.30.0
+        version: 1.30.0
       '@willsoto/nestjs-prometheus':
         specifier: ^6.0.2
         version: 6.0.2(@nestjs/common@11.0.9(class-transformer@0.5.1)(class-validator@0.14.1)(reflect-metadata@0.2.2)(rxjs@7.8.1))(prom-client@15.1.3)

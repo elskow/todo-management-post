@@ -8,8 +8,11 @@ import { Server } from 'http';
 import { MetricsService } from './common/metrics/metrics.service';
 import { MetricsInterceptor } from './common/metrics/metrics.interceptor';
 import { ShutdownService } from './common/shutdown.service';
+import { otelSDK } from './common/telemetry/telemetry.config';
 
 async function bootstrap() {
+  await otelSDK.start();
+
   try {
     const app = await NestFactory.create(AppModule);
     let server: Server;
@@ -37,9 +40,9 @@ async function bootstrap() {
     );
 
     const config = new DocumentBuilder()
-      .setTitle('Social Media Post Management API')
+      .setTitle(process.env.npm_package_name!!)
       .setDescription('API for managing social media post tasks')
-      .setVersion('1.0')
+      .setVersion(process.env.npm_package_version!!)
       .addBearerAuth()
       .build();
 
@@ -53,9 +56,10 @@ async function bootstrap() {
     // Graceful shutdown handling
     const signals = ['SIGTERM', 'SIGINT'];
     for (const signal of signals) {
-      process.on(signal, () => {
+      process.on(signal, async () => {
         Logger.log(`Received ${signal}, initiating shutdown...`, 'Bootstrap');
-        app.close();
+        await otelSDK.shutdown();
+        await app.close();
       });
     }
 
