@@ -6,6 +6,7 @@ import { BullModule } from '@nestjs/bull';
 import { ScheduleModule } from '@nestjs/schedule';
 import { PostModule } from './post/post.module';
 import { HealthModule } from './health/health.module';
+import { ShutdownService } from './common/shutdown.service';
 import databaseConfig from './config/db.config';
 import { Post } from './post/core/post.entity';
 import { PostVersion } from './post/core/post-version.entity';
@@ -22,11 +23,18 @@ import { join } from 'path';
       ttl: 60,
     }),
     ScheduleModule.forRoot(),
-    BullModule.forRoot({
-      redis: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT!!) || 6379,
-      },
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        redis: {
+          host: configService.get('REDIS_HOST', 'localhost'),
+          port: configService.get('REDIS_PORT', 6379),
+        },
+      }),
+      inject: [ConfigService],
+    }),
+    BullModule.registerQueue({
+      name: 'analytics',
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule, HealthModule],
@@ -45,6 +53,14 @@ import { join } from 'path';
       inject: [ConfigService],
     }),
     PostModule,
+    HealthModule,
+  ],
+  providers: [
+    ShutdownService,
+    {
+      provide: 'SHUTDOWN_TIMEOUT',
+      useValue: 30000,
+    },
   ],
 })
 export class AppModule {}
