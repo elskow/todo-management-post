@@ -29,6 +29,15 @@ services:
       retries: 3
       start_period: 40s
 
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: todo_posts_jaeger
+    ports:
+      - '16686:16686' # Jaeger UI
+      - '4318:4318' # OTLP HTTP receiver
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+
   mysql:
     image: mysql:8.0
     container_name: todo_posts_mysql
@@ -59,19 +68,88 @@ services:
       timeout: 5s
       retries: 5
 
-  jaeger:
-    image: jaegertracing/all-in-one:latest
-    container_name: todo_posts_jaeger
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: todo_posts_prometheus
     ports:
-      - '16686:16686' # Jaeger UI
-      - '4318:4318' # OTLP HTTP receiver
-    environment:
-      - COLLECTOR_OTLP_ENABLED=true
+      - '9090:9090'
+    volumes:
+      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
     healthcheck:
-      test: ['CMD', 'wget', '--spider', '-q', 'localhost:16686']
+      test: ['CMD', 'wget', '--spider', '-q', 'localhost:9090/-/healthy']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: todo_posts_grafana
+    ports:
+      - '3001:3000'
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./config/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+    depends_on:
+      - prometheus
+      - loki
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'localhost:3000/api/health']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  loki:
+    image: grafana/loki:latest
+    container_name: todo_posts_loki
+    ports:
+      - '3100:3100'
+    volumes:
+      - loki_data:/loki
+      - ./config/loki/config.yaml:/etc/loki/config.yaml
+    command:
+      - '-config.file=/etc/loki/config.yaml'
+      - '-validation.allow-structured-metadata=true'
+      - '-config.expand-env=true'
+    user: '0'
+    environment:
+      - JAEGER_AGENT_HOST=jaeger
+      - JAEGER_AGENT_PORT=6831
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1',
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
+    depends_on:
+      - jaeger
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: todo_posts_promtail
+    volumes:
+      - /var/log:/var/log
+      - ./config/promtail/config.yml:/etc/promtail/config.yml
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
 
 volumes:
   mysql_data:
+  prometheus_data:
+  grafana_data:
+  loki_data:

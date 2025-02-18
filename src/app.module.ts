@@ -13,6 +13,9 @@ import databaseConfig from './config/db.config';
 import { Post } from './post/core/post.entity';
 import { PostVersion } from './post/core/post-version.entity';
 import { join } from 'path';
+import { LoggingModule } from './common/logging/logging.module';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { LoggingInterceptor } from './common/logging/logging.interceptor';
 
 @Module({
   imports: [
@@ -55,6 +58,7 @@ import { join } from 'path';
       inject: [ConfigService],
     }),
     TelemetryModule,
+    LoggingModule,
     PostModule,
     HealthModule,
     MetricsModule,
@@ -64,6 +68,10 @@ import { join } from 'path';
     {
       provide: 'SHUTDOWN_TIMEOUT',
       useValue: 30000,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: LoggingInterceptor,
     },
   ],
 })

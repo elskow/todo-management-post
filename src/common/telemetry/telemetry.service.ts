@@ -17,6 +17,10 @@ export class TelemetryService {
     this.tracer = trace.getTracer('todo-post-service');
   }
 
+  getActiveSpan(): Span | undefined {
+    return this.contextManager.getActiveSpan();
+  }
+
   startSpan(
     name: string,
     options: {
