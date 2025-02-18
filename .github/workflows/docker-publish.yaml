@@ -153,9 +153,10 @@ jobs:
               .map(commit => `* ${commit.commit.message}`)
               .join('\n');
 
-            return changelog;
+            core.setOutput('changelog', changelog);
 
       - name: Create Release
+        id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -164,7 +165,7 @@ jobs:
           release_name: Release v${{ env.NEW_VERSION }}
           body: |
             ## What's Changed
-            ${{ steps.changelog.outputs.result }}
+            ${{ steps.changelog.outputs.changelog }}
 
             ## Security Scan Results
             Security scan results are attached to this release.
