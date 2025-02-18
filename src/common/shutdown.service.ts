@@ -14,6 +14,7 @@ export class ShutdownService implements OnApplicationShutdown {
   private readonly logger = new Logger(ShutdownService.name);
   private readonly SHUTDOWN_TIMEOUT = 30000; // 30 seconds
   private isShuttingDown = false;
+  private server?: any;
 
   constructor(
     private moduleRef: ModuleRef,
@@ -24,7 +25,11 @@ export class ShutdownService implements OnApplicationShutdown {
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
-  async onApplicationShutdown(signal?: string) {
+  setServer(server: any) {
+    this.server = server;
+  }
+
+  async onApplicationShutdown(signal?: string): Promise<void> {
     if (this.isShuttingDown) {
       return;
     }
@@ -33,18 +38,32 @@ export class ShutdownService implements OnApplicationShutdown {
     this.logger.log(`Starting cleanup with signal: ${signal}`);
 
     try {
+      if (this.server) {
+        await new Promise<void>((resolve) => {
+          this.server.close(() => {
+            this.logger.log('HTTP server closed');
+            resolve();
+          });
+        });
+      }
+
       await Promise.race([
         this.performCleanup(),
         this.timeoutPromise(this.SHUTDOWN_TIMEOUT),
       ]);
+
+      this.logger.log('Application closed successfully');
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      process.exit(0);
     } catch (error) {
       if (error.message === 'SHUTDOWN_TIMEOUT') {
         this.logger.error('Shutdown timeout reached, forcing exit');
       } else {
         this.logger.error(`Error during cleanup: ${error}`);
       }
-    } finally {
-      this.isShuttingDown = false;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      process.exit(1);
     }
   }
 
