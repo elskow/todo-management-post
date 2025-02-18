@@ -5,6 +5,7 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { BullModule } from '@nestjs/bull';
 import { ScheduleModule } from '@nestjs/schedule';
 import { PostModule } from './post/post.module';
+import { MetricsModule } from './common/metrics/metrics.module';
 import { HealthModule } from './health/health.module';
 import { ShutdownService } from './common/shutdown.service';
 import databaseConfig from './config/db.config';
@@ -54,6 +55,7 @@ import { join } from 'path';
     }),
     PostModule,
     HealthModule,
+    MetricsModule,
   ],
   providers: [
     ShutdownService,

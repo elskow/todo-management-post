@@ -5,12 +5,19 @@ import { AppModule } from './app.module';
 import { compressionConfig } from './config/compression.config';
 import * as compression from 'compression';
 import { Server } from 'http';
+import { MetricsService } from './common/metrics/metrics.service';
+import { MetricsInterceptor } from './common/metrics/metrics.interceptor';
+import { ShutdownService } from './common/shutdown.service';
 
 async function bootstrap() {
   try {
     const app = await NestFactory.create(AppModule);
     let server: Server;
-    let isShuttingDown = false;
+
+    const metricsService = app.get(MetricsService);
+    const shutdownService = app.get(ShutdownService);
+
+    app.useGlobalInterceptors(new MetricsInterceptor(metricsService));
 
     // Enable shutdown hooks
     app.enableShutdownHooks();
@@ -41,50 +48,15 @@ async function bootstrap() {
 
     const port = process.env.PORT || 3000;
     server = await app.listen(port);
+    shutdownService.setServer(server);
 
     // Graceful shutdown handling
     const signals = ['SIGTERM', 'SIGINT'];
-
-    async function shutdown(signal: string) {
-      if (isShuttingDown) {
-        return;
-      }
-      isShuttingDown = true;
-
-      Logger.log(
-        `Received ${signal}, starting graceful shutdown...`,
-        'Bootstrap',
-      );
-
-      try {
-        // Stop accepting new requests
-        server.close(() => {
-          Logger.log('HTTP server closed', 'Bootstrap');
-        });
-
-        // Wait for existing requests to finish (adjust timeout as needed)
-        const forceShutdownTimeout = setTimeout(() => {
-          Logger.error(
-            'Could not close connections in time, forcefully shutting down',
-            'Bootstrap',
-          );
-          process.exit(1);
-        }, 30000);
-
-        // Close NestJS application
-        await app.close();
-        clearTimeout(forceShutdownTimeout);
-
-        Logger.log('Application closed successfully', 'Bootstrap');
-        process.exit(0);
-      } catch (error) {
-        Logger.error(`Error during graceful shutdown: ${error}`, 'Bootstrap');
-        process.exit(1);
-      }
-    }
-
     for (const signal of signals) {
-      process.on(signal, () => shutdown(signal));
+      process.on(signal, () => {
+        Logger.log(`Received ${signal}, initiating shutdown...`, 'Bootstrap');
+        app.close();
+      });
     }
 
     // Unhandled rejection and exception handlers
