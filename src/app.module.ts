@@ -7,6 +7,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { PostModule } from './post/post.module';
 import { MetricsModule } from './common/metrics/metrics.module';
 import { HealthModule } from './health/health.module';
+import { TelemetryModule } from './common/telemetry/telemetry.module';
 import { ShutdownService } from './common/shutdown.service';
 import databaseConfig from './config/db.config';
 import { Post } from './post/core/post.entity';
@@ -53,6 +54,7 @@ import { join } from 'path';
       }),
       inject: [ConfigService],
     }),
+    TelemetryModule,
     PostModule,
     HealthModule,
     MetricsModule,

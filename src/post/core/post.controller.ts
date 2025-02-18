@@ -1,5 +1,9 @@
 import {
   Controller,
+  Get,
+  Post as HttpPost,
+  Put,
+  Delete,
   Param,
   Body,
   Headers,
@@ -13,12 +17,6 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import {
-  Get,
-  Post as HttpPost,
-  Put,
-  Delete,
-} from '@common/telemetry/decorators/http.decorator';
 import { PostsService } from './post.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
